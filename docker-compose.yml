@@ -1,0 +1,81 @@
+version: "3.9"
+
+services:
+  # ─── PostgreSQL Database ───────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: orion-postgres
+    environment:
+      POSTGRES_DB: orion_db
+      POSTGRES_USER: orion
+      POSTGRES_PASSWORD: orion_secret
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orion -d orion_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - orion-network
+
+  # ─── Backend (Spring Boot) ─────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: orion-backend
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/orion_db
+      SPRING_DATASOURCE_USERNAME: orion
+      SPRING_DATASOURCE_PASSWORD: orion_secret
+      AGENT_SERVICE_URL: http://agent-service:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - orion-network
+
+  # ─── Agent Service (Python FastAPI) ────────────────────
+  agent-service:
+    build:
+      context: ./agent-service
+      dockerfile: Dockerfile
+    container_name: orion-agent-service
+    ports:
+      - "8000:8000"
+    environment:
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      DATABASE_URL: postgresql://orion:orion_secret@postgres:5432/orion_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - orion-network
+
+  # ─── Frontend (React + Vite) ──────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: orion-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:8080
+    depends_on:
+      - backend
+    networks:
+      - orion-network
+
+volumes:
+  postgres_data:
+
+networks:
+  orion-network:
+    driver: bridge

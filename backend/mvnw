@@ -1,0 +1,67 @@
+#!/bin/sh
+# ----------------------------------------------------------------------------
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#    https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+# ----------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------
+# Apache Maven Wrapper startup script, version 3.2.0
+# ----------------------------------------------------------------------------
+
+# If JAVA_HOME is not set, try to detect it
+if [ -z "$JAVA_HOME" ]; then
+  if command -v java > /dev/null 2>&1; then
+    JAVA_HOME=$(dirname $(dirname $(readlink -f $(command -v java) 2>/dev/null || command -v java)))
+  fi
+fi
+
+MAVEN_WRAPPER_JAR="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )/.mvn/wrapper/maven-wrapper.jar"
+MAVEN_WRAPPER_PROPERTIES="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )/.mvn/wrapper/maven-wrapper.properties"
+
+# Read distributionUrl from properties
+distributionUrl=$(sed -n 's/distributionUrl=//p' "$MAVEN_WRAPPER_PROPERTIES" | tr -d '\r')
+
+# Compute local distribution directory
+MAVEN_USER_HOME="${MAVEN_USER_HOME:-${HOME}/.m2}"
+distributionUrlName="${distributionUrl##*/}"
+distributionVersion="${distributionUrlName%-bin.zip}"
+distributionVersion="${distributionVersion#apache-maven-}"
+MAVEN_HOME="${MAVEN_USER_HOME}/wrapper/dists/apache-maven-${distributionVersion}-bin/$(echo "$distributionUrl" | md5sum | cut -c1-8)/apache-maven-${distributionVersion}"
+
+# If Maven is not already extracted, download it
+if [ ! -d "$MAVEN_HOME" ]; then
+  echo "Downloading Apache Maven ${distributionVersion}..."
+  tmpDir=$(mktemp -d)
+  zipFile="${tmpDir}/${distributionUrlName}"
+
+  if command -v curl > /dev/null 2>&1; then
+    curl -fsSL -o "$zipFile" "$distributionUrl"
+  elif command -v wget > /dev/null 2>&1; then
+    wget -q -O "$zipFile" "$distributionUrl"
+  else
+    echo "ERROR: Neither curl nor wget is available." >&2
+    exit 1
+  fi
+
+  mkdir -p "$(dirname "$MAVEN_HOME")"
+  unzip -q "$zipFile" -d "$(dirname "$MAVEN_HOME")"
+  rm -rf "$tmpDir"
+fi
+
+MAVEN_CMD="${MAVEN_HOME}/bin/mvn"
+
+exec "$MAVEN_CMD" "$@"
