@@ -223,4 +223,3 @@ We welcome contributions to make Orion AI even better!
 
 ---
 
-_Built with ❤️ by [Ramazan Korucu](https://github.com/rkorucu)_
